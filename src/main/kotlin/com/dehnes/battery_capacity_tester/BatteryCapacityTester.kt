@@ -12,6 +12,7 @@ import mu.KotlinLogging
 import java.net.InetAddress
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
 object Config {
@@ -19,8 +20,8 @@ object Config {
     val localUdpPort = 18190
 
     // setup limits:
-    val dischargeVoltage = 2.75
-    val dischargeCurrent = 2.0
+    val dischargeVoltage = 3.7 // 2.75
+    val dischargeCurrent = 1.0
     val timeLimit = Duration.ofSeconds(3600)
 
     val initCapacityUsedInMilliAmpereHours = 0.0
@@ -34,7 +35,23 @@ val executorService = Executors.newCachedThreadPool {
 }
 val logger = KotlinLogging.logger { }
 
+enum class Mode {
+    CC,
+    CV
+}
+
+@Volatile
+var stop = false
+
+val shutdownSync = CountDownLatch(1)
+
 fun main() {
+    // gracefull shutdown
+    Runtime.getRuntime().addShutdownHook(Thread {
+        stop = true
+        shutdownSync.await()
+    })
+
     // setup
     val scpiChannel = UdpSCPIChannel(
         InetAddress.getByName(electronicLoadAddr.split(":")[0]),
@@ -44,12 +61,15 @@ fun main() {
     ).apply { start() }
     val startedAt = Instant.now()
 
+    // start in CC mode
     scpiChannel.setConstantCurrent(dischargeCurrent)
+    var mode = Mode.CC
+
+    // Let's go
     scpiChannel.enableInput()
 
     // control loop
     try {
-        var constantVoltage = false
         var lastMeasured = Instant.now().toEpochMilli()
         var sumMilliAmpereHours = initCapacityUsedInMilliAmpereHours
         while (true) {
@@ -60,9 +80,18 @@ fun main() {
             val now = Instant.now().toEpochMilli()
             val duration = Duration.ofMillis(now - lastMeasured)
 
-            if (voltage < dischargeVoltage && !constantVoltage) {
+            if (!scpiChannel.isInputEnabled()) {
+                logger.info { "Input disabled, exit" }
+                break
+            }
+            if (stop) {
+                logger.info { "Exit" }
+                break
+            }
+
+            if (voltage < dischargeVoltage && mode == Mode.CC) {
                 scpiChannel.setConstantVoltage(dischargeVoltage)
-                constantVoltage = true
+                mode = Mode.CV
             }
             if (startedAt.plusSeconds(timeLimit.toSeconds()).toEpochMilli() < now) {
                 logger.info { "Time limit reached" }
@@ -78,13 +107,22 @@ fun main() {
             val durationInHours = durationInSeconds / 3600
             val milliAmpereHours = (current * 1000) * durationInHours
             sumMilliAmpereHours += milliAmpereHours
-            logger.info { "duration=${duration.toMillis()} voltage=$voltage current=$current sumMilliAmpereHours=${sumMilliAmpereHours.toDecimalString()} milliAmpereHours=${milliAmpereHours.toDecimalString()}" }
+            logger.info {
+                " mode=$mode" +
+                        " duration=${duration.toMillis()}" +
+                        " voltage=${voltage.toDecimalString()}" +
+                        " current=${current.toDecimalString()}" +
+                        " sumMilliAmpereHours=${sumMilliAmpereHours.toDecimalString()}" +
+                        " milliAmpereHours=${milliAmpereHours.toDecimalString()}"
+            }
 
             lastMeasured = now
         }
     } finally {
         scpiChannel.disableInput()
     }
+
+    shutdownSync.countDown()
 }
 
 fun SCPIChannel.enableInput() {
@@ -109,5 +147,7 @@ fun SCPIChannel.disableInput() {
     this.rpc(":INPut OFF", 0)
     check(this.rpc(":INPut?").single() == "OFF")
 }
+
+fun SCPIChannel.isInputEnabled() = this.rpc(":INPut?").single() == "ON"
 
 fun Double.toDecimalString(decimals: Int = 3) = String.format("%.${decimals}f", this)
