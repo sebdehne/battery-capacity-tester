@@ -1,13 +1,5 @@
 package com.dehnes.battery_capacity_tester
 
-import com.dehnes.battery_capacity_tester.Config.cutoffCurrent
-import com.dehnes.battery_capacity_tester.Config.dischargeCurrent
-import com.dehnes.battery_capacity_tester.Config.dischargeVoltage
-import com.dehnes.battery_capacity_tester.Config.electronicLoadAddr
-import com.dehnes.battery_capacity_tester.Config.initCapacityUsedInMilliAmpereHours
-import com.dehnes.battery_capacity_tester.Config.interval
-import com.dehnes.battery_capacity_tester.Config.localUdpPort
-import com.dehnes.battery_capacity_tester.Config.timeLimit
 import mu.KotlinLogging
 import java.net.InetAddress
 import java.time.Duration
@@ -15,20 +7,9 @@ import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
-object Config {
-    val electronicLoadAddr = "192.168.1.17:18190"
-    val localUdpPort = 18190
+val initCapacityUsedInMilliAmpereHours = 0.0
 
-    // setup limits:
-    val dischargeVoltage = 3.7 // 2.75
-    val dischargeCurrent = 1.0
-    val timeLimit = Duration.ofSeconds(3600)
-
-    val initCapacityUsedInMilliAmpereHours = 0.0
-
-    val cutoffCurrent = 0.05 // 50mA
-    val interval = Duration.ofSeconds(1)
-}
+val interval = Duration.ofSeconds(1)
 
 val executorService = Executors.newCachedThreadPool {
     Thread(it).apply { isDaemon = true }
@@ -45,7 +26,17 @@ var stop = false
 
 val shutdownSync = CountDownLatch(1)
 
-fun main() {
+fun main(vararg args: String) {
+
+    check(args.size > 5) { "Invalid argument. Usage: <host>:<port> <localUdpPort> <dischargeVoltage> <dischargeCurrent> <timeLimitSeconds> <cutoffCurrent>" }
+    val electronicLoadAddr = args[0].split(":")[0]
+    val electronicLoadPort = args[0].split(":")[1].toInt()
+    val localUdpPort = args[1].toInt()
+    val dischargeVoltage = args[2].toDouble()
+    val dischargeCurrent = args[3].toDouble()
+    val timeLimit = Duration.ofSeconds(args[4].toLong())
+    val cutoffCurrent = args[5].toDouble()
+
     // gracefull shutdown
     Runtime.getRuntime().addShutdownHook(Thread {
         stop = true
@@ -54,8 +45,8 @@ fun main() {
 
     // setup
     val scpiChannel = UdpSCPIChannel(
-        InetAddress.getByName(electronicLoadAddr.split(":")[0]),
-        electronicLoadAddr.split(":")[1].toInt(),
+        InetAddress.getByName(electronicLoadAddr),
+        electronicLoadPort,
         localUdpPort,
         executorService
     ).apply { start() }
@@ -120,6 +111,7 @@ fun main() {
         }
     } finally {
         scpiChannel.disableInput()
+        scpiChannel.stop()
     }
 
     shutdownSync.countDown()
@@ -132,6 +124,7 @@ fun SCPIChannel.enableInput() {
 
 fun SCPIChannel.setConstantVoltage(voltage: Double) {
     this.rpc(":VOLT ${voltage.toDecimalString(3)}V", 0)
+    println(this.rpc(":VOLT?").single())
     check(this.rpc(":VOLT?").single() == voltage.toDecimalString(3) + "V")
 }
 

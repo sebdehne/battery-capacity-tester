@@ -1,6 +1,5 @@
 package com.dehnes.battery_capacity_tester
 
-import jakarta.annotation.PreDestroy
 import mu.KotlinLogging
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -46,7 +45,6 @@ class UdpSCPIChannel(
         }
     }
 
-    @PreDestroy
     fun stop() {
         stop = true
     }
