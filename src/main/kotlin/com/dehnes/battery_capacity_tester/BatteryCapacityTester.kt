@@ -82,6 +82,7 @@ fun main(vararg args: String) {
 
             if (voltage < dischargeVoltage && mode == Mode.CC) {
                 scpiChannel.setConstantVoltage(dischargeVoltage)
+                scpiChannel.enableInput()
                 mode = Mode.CV
             }
             if (startedAt.plusSeconds(timeLimit.toSeconds()).toEpochMilli() < now) {
@@ -112,9 +113,9 @@ fun main(vararg args: String) {
     } finally {
         scpiChannel.disableInput()
         scpiChannel.stop()
+        shutdownSync.countDown()
     }
 
-    shutdownSync.countDown()
 }
 
 fun SCPIChannel.enableInput() {
@@ -123,9 +124,8 @@ fun SCPIChannel.enableInput() {
 }
 
 fun SCPIChannel.setConstantVoltage(voltage: Double) {
-    this.rpc(":VOLT ${voltage.toDecimalString(3)}V", 0)
-    println(this.rpc(":VOLT?").single())
-    check(this.rpc(":VOLT?").single() == voltage.toDecimalString(3) + "V")
+    this.rpc(":VOLT ${voltage.toDecimalString(4)}V", 0)
+    check(this.rpc(":VOLT?").single() == voltage.toDecimalString(4) + "V")
 }
 
 
