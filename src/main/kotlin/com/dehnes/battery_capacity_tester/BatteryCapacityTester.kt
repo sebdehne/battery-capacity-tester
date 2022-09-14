@@ -101,11 +101,11 @@ fun main(vararg args: String) {
             sumMilliAmpereHours += milliAmpereHours
             logger.info {
                 " mode=$mode" +
-                        " duration=${duration.toMillis()}" +
-                        " voltage=${voltage.toDecimalString()}" +
-                        " current=${current.toDecimalString()}" +
-                        " sumMilliAmpereHours=${sumMilliAmpereHours.toDecimalString()}" +
-                        " milliAmpereHours=${milliAmpereHours.toDecimalString()}"
+                        " duration=${duration.toMillis()}ms" +
+                        " voltage=${voltage.toDecimalString()}V" +
+                        " current=${current.toDecimalString()}A" +
+                        " totalDrawnCapacity=${sumMilliAmpereHours.toDecimalString()}mAh" +
+                        " drawnCapacity=${milliAmpereHours.toDecimalString()}mAh"
             }
 
             lastMeasured = now
