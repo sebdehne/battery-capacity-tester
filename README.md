@@ -7,6 +7,9 @@ SCPI commands are sent/received via UDP and works for example with:
 - [RND 320-KEL103 - Electronic DC Load](https://www.elfadistrelec.no/en/electronic-dc-load-120v-30a-300w-rnd-lab-rnd-320-kel103/p/30126024)
 - [Korad KEL103 programmable DC electronic load](https://eleshop.eu/korad-kel103-programmable-dc-electronic-load.html)
 
+## Download
+Se [Releases](https://github.com/sebdehne/battery-capacity-tester/releases) for pre-built binaries.
+
 ## Example
 
      % java -jar battery-capacity-tester-0.1.jar
