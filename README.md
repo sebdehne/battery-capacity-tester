@@ -8,6 +8,13 @@ SCPI commands are sent/received via UDP and works for example with:
 - [Korad KEL103 programmable DC electronic load](https://eleshop.eu/korad-kel103-programmable-dc-electronic-load.html)
 
 ## Example
+
+     % java -jar battery-capacity-tester-0.1.jar
+     Exception in thread "main" java.lang.IllegalStateException: Invalid argument. Usage: <host>:<port> <localUdpPort> <dischargeVoltage> <dischargeCurrent> <timeLimitSeconds> <cutoffCurrent>
+     at com.dehnes.battery_capacity_tester.BatteryCapacityTesterKt.main(BatteryCapacityTester.kt:31)
+
+
+
      % java -jar battery-capacity-tester.jar 192.168.1.17:18190 18190 3.7 1.0 3600 0.05
      18:42:16.941 [main] INFO  c.d.b.BatteryCapacityTester -  mode=CC duration=1027 voltage=3.723 current=0.999 sumMilliAmpereHours=0.285 milliAmpereHours=0.285
      18:42:17.976 [main] INFO  c.d.b.BatteryCapacityTester -  mode=CC duration=1046 voltage=3.721 current=0.999 sumMilliAmpereHours=0.575 milliAmpereHours=0.290
