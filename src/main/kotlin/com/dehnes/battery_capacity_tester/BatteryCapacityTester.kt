@@ -52,6 +52,8 @@ fun main(vararg args: String) {
     ).apply { start() }
     val startedAt = Instant.now()
 
+    scpiChannel.disableInput()
+
     // start in CC mode
     scpiChannel.setConstantCurrent(dischargeCurrent)
     var mode = Mode.CC
@@ -125,13 +127,22 @@ fun SCPIChannel.enableInput() {
 
 fun SCPIChannel.setConstantVoltage(voltage: Double) {
     this.rpc(":VOLT ${voltage.toDecimalString(4)}V", 0)
-    check(this.rpc(":VOLT?").single() == voltage.toDecimalString(4) + "V")
+    val expected = voltage.toDecimalString(4) + "V"
+    val got = this.rpc(":VOLT?").single()
+    check(got == expected) {
+        "Got $expected != $got"
+    }
 }
 
 
 fun SCPIChannel.setConstantCurrent(current: Double) {
     this.rpc(":CURR ${current.toDecimalString(4)}A", 0)
-    check(this.rpc(":CURR?").single() == current.toDecimalString(4) + "A")
+
+    val expected = current.toDecimalString(3)
+    val got = this.rpc(":CURR?").single()
+    check(got == current.toDecimalString(3) + "A") {
+        "Got $expected != $got"
+    }
 }
 
 fun SCPIChannel.getMeasuredCurrent() = this.rpc(":MEASure:CURRent?").single().replace("A", "").toDouble()
